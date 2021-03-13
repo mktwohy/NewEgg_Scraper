@@ -14,11 +14,15 @@ import pickle
 from os.path import exists
 
 data = list()
-    # def __init__(self, newegg_url):
-    #     self.init_soup = self.get_soup(newegg_url)
-    #     self.products = list()
-    #     self.page = self.Page('https://www.newegg.com/p/pl?d=laptops')
         
+def pickle_data(filename = 'PickledData'):
+    filename = filename+"%s"+'.pickle'
+    i = 0
+    while exists(filename % i):
+        i += 1
+    with open(filename % i,'wb') as file:
+        file.write(pickle.dumps(data))    
+
 def get_soup(url):
         uClient = uReq(url.replace(' ','')) # opening up connection
         page_html = uClient.read() # grabbing the page
@@ -26,25 +30,59 @@ def get_soup(url):
         
         return bSoup(page_html, "html.parser") # parse html
     
-    
 def scrape_page(page_url):
-        # add all products to list  
-        # if page_has_next
-            # scrape_page(next_page)
+    p = Page(page_url)  # Create page object, which then adds products to list  
+
+    if p.page_number < p.last_page_number:
+        scrape_page(p.next_page_url)
+    
+#TODO
+def save_as_csv(filename = 'newEgg_Scrape'):
         pass
     
-def save(filename = 'newEgg_Scrape'):
-        pass
+def main():
+    scrape_page('https://www.newegg.com/p/pl?d=laptop&N=4113%204112')
+    # print(data)
+    pickle_data()
     
     
-    
+#TODO
 class Page:
     def __init__(self, page_url):
+        self.url = page_url
         self.soup = get_soup(page_url)
-   
-    def find_next_page():
-        pass
+        self.page_number, self.last_page_number = self.scrape_page_num()
+        self.next_page_url = self.scrape_next_page_url()
+        self.scrape_products()
+        print(self.page_number)
         
+   
+    """Returns list of current page number and last page number"""
+    def scrape_page_num(self):
+        pagination = self.soup.findAll("span",{"class":"list-tool-pagination-text"}) 
+        str_list = pagination[0].text.split()[1].split('/')
+        int_list = list(map(int,str_list))
+        return int_list
+    
+    def scrape_next_page_url(self):
+        if self.page_number == self.last_page_number:
+            return None
+        if '&' in self.url:
+            self.url = self.url.split('&')[0] #remove &page#
+        new_url = self.url + "&page=" + str(self.page_number+1)
+        return new_url
+    
+    """creates a Product object for every product on the page"""
+    def scrape_products(self):
+        containers = self.soup.find_all("div",{"class":"item-container"})
+        for c in containers:
+            try:
+                product_url = c.a['href']
+                Product(product_url) 
+                print("Added Product")
+                sleep(random.randint(2, 10))
+            except: 
+                print("Fail")
     
 class Product:
     def __init__(self,product_url):
@@ -94,18 +132,10 @@ class Product:
             s = s +'\n'+ k +': ' + self.all_specs[k]
         return s
 
-def pickle_data(filename = 'PickledData'):
-    filename = filename+"%s"+'.pickle'
-    i = 0
-    while exists(filename % i):
-        i += 1
-    with open(filename % i,'wb') as file:
-        file.write(pickle.dumps(data))
 
 
-plink = 'https://www.newegg.com/carbon-gray-kuu-yobook-workstation/p/1TS-00BK-00049?Item=9SIANGPDNT4057&Description=laptops&cm_re=laptops-_-9SIANGPDNT4057-_-Product&cm_sp=SP-_-444662-_-0-_-0-_-9SIANGPDNT4057-_-laptops-_-laptop-_-4'
-p = Product(plink)
-print(data)
 
-pickle_data()
+    
+if __name__=="__main__":
+    main()
 
