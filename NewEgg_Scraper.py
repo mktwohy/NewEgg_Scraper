@@ -12,6 +12,19 @@ import random
 import pickle
 from os.path import exists
 
+#URLS
+notebooks_url = 'https://www.newegg.com/p/pl?N=100006740%204814&Order=3&page=1'
+gaming_url = 'https://www.newegg.com/p/pl?N=100167732%204814&Order=3'
+two_in_one_url = 'https://www.newegg.com/p/pl?N=100020039%204814&page=1'
+chromebooks_url = 'https://www.newegg.com/p/pl?N=100167750%204814'
+mobile_workstations_url = 'https://www.newegg.com/p/pl?N=100167751%204814'
+touch_laptops_url = 'https://www.newegg.com/p/pl?Submit=ENE&IsNodeId=1&N=100006740%20600414170%204814'
+surface_laptops_url = 'https://www.newegg.com/p/pl?N=100006740%20601298036%20601323358%20601346246%204814'
+surface_book_url = 'https://www.newegg.com/p/pl?N=100020039%2050001149%20601186726%20601305863%204814'
+surface_pro_url = 'https://www.newegg.com/p/pl?N=100020039%2050001149%20601294701%20601294702%20601299030%20601323355%204814'
+surface_go_url = 'https://www.newegg.com/p/pl?N=100020039%2050001149%20601319791%204814'
+macbook_url = 'https://www.newegg.com/p/pl?N=100017489%2050001759%204814&SpeTabStoreType=0&Manufactory=1759'
+
 data = list()
 htmls = list()
 page_limit = 100
@@ -25,21 +38,20 @@ def pickle_data(data_to_pickle, filename = 'PickledData'):
         file.write(pickle.dumps(data_to_pickle))
     print(filename % i,'pickled!')
 
-def get_soup(url):
-        # user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36"
+def url_to_soup(url):
         uClient = uReq(url.replace(' ','')) # opening up connection
         page_html = uClient.read() # grabbing the page
         uClient.close() # closing connection
         
         return bSoup(page_html, "html.parser") # parse html
 
+def html_to_soup(html):
+    return bSoup(html, "html.parser")
+
 def load_pickle(filename):
     with open(filename+'.pickle', 'rb') as file:
         p = pickle.load(file)
     return p
-
-def pickle_to_soup(html):
-    return bSoup(html, "html.parser")
 
 def get_html(url):
     uClient = uReq(url.replace(' ','')) # opening up connection
@@ -54,22 +66,11 @@ def scrape_page(page_url):
     if p.page_number < p.last_page_number and p.page_number < page_limit:
         scrape_page(p.next_page_url)
     
-#TODO
-def save_as_csv(filename = 'newEgg_Scrape'):
-        pass
-    
-def main():
-    scrape_page('https://www.newegg.com/p/pl?d=gtx+1050')
-    # print(data)
-    pickle_data(data)
-    pickle_data(htmls)
-    
-    
-#TODO
+
 class Page:
     def __init__(self, page_url):
         self.url = page_url
-        self.soup = get_soup(page_url)
+        self.soup = url_to_soup(page_url)
         self.page_number, self.last_page_number = self.scrape_page_num()
         print("page",self.page_number,'out of',self.last_page_number)
         self.next_page_url = self.scrape_next_page_url()
@@ -101,15 +102,15 @@ class Page:
                 Product(product_url) 
                 print("\tProduct",i)
             except: 
-                print("Fail")
-            sleep(random.randint(2, 5))
+                print("\tProduct",i,'failed')
+            sleep(random.randint(5, 7))
             i+=1
 
     
 class Product:
     def __init__(self,product_url):
         htmls.append(get_html(product_url)) # save the html
-        self.soup = get_soup(product_url)
+        self.soup = url_to_soup(product_url)
         self.all_specs = dict()
         self.filtered_specs = dict()
             
@@ -117,7 +118,7 @@ class Product:
         self.scrape_price()
         self.scrape_rating()
         self.scrape_table()
-        self.filter_results()
+        # self.filter_results()
         # print(self.__str__())
         
         data.append(self.all_specs) # save the specs
@@ -130,7 +131,6 @@ class Product:
                 val = row.td.text.strip()
                 self.all_specs[key] = val
 
-    #TODO
     def scrape_rating(self):
         ratings_container = self.soup.find_all('div',{'class':'product-rating'})
         rating = 'NA'
@@ -142,11 +142,7 @@ class Product:
                     rating = r+1
        
         self.all_specs['Rating'] = str(rating)
-
-        # review_container = self.soup.find_all('span',{'title':'Read reviews...'})
-        
-        
-    
+ 
     def scrape_price(self):
         cur_price = self.soup.find_all('li',{'class':'price-current'})[0].text
         was_price = self.soup.find_all('li',{'class':'price-was'})[0].text
@@ -169,19 +165,31 @@ class Product:
         for k in self.filtered_specs:
             s = s +'\n'+ k +': ' + self.all_specs[k]
         return s
+    
+def main(url,genre):
+    try:
+        scrape_page(url)
+        print('Done with',genre+'!')
+    except(KeyboardInterrupt):
+        print("Ending scrape.")
+    except():
+        print("Something went wrong.")
+    print('Saving htmls and data...')
+    pickle_data(data,"PickledSpecs"+'_'+genre)
+    pickle_data(htmls,"Pickled_HTML"+'_'+genre)
 
     
 if __name__=="__main__":
-    try:
-        main()
-    except(KeyboardInterrupt):
-        print("Ending scrape. Saving htmls and data...")
-        pickle_data(data, filename = 'PickledSpecs')
-        pickle_data(htmls, filename = 'PickledHTML')
-    except():
-        print("Something went wrong. Saving htmls and data...")
-        pickle_data(data, filename = 'PickledSpecs_CRASH')
-        pickle_data(htmls, filename = 'PickledHTML_CRASH')
-
-# soup1 = get_pickled_soup(pickled_htmls[0])
-#Product('https://www.newegg.com/amd-ryzen-5-3600/p/N82E16819113569?Item=N82E16819113569&cm_sp=Homepage_dailydeals-_-P0_19-113-569-_-03132021&quicklink=true')
+    # main(notebooks_url,'Notebook')
+    # main(mobile_workstations_url, 'mobileWorkstation')
+    # main(two_in_one_url,'2in1_')
+    # main(gaming_url,'gaming')
+    # main(chromebooks_url,'chromebook')
+    # main('https://www.newegg.com/p/pl?N=100006740%204814&Order=3&page=26','Notebook')
+   
+    # main(surface_laptops_url, 'surface_laptops')
+    # main(surface_book_url, 'surface_book')
+    # main(surface_pro_url, 'surface_pro')
+    # main(surface_go_url, 'surface_go')
+    # main(macbook_url, 'macbook')
+    main(touch_laptops_url, 'touch_laptops')
