@@ -8,22 +8,6 @@ import pickle
 import csv
 from os.path import exists
 
-def has_keys(dictionary, keys):
-    for k in keys:
-        if k not in dictionary.keys():
-            return False
-    return True
-
-def filter_cases_OLD(cases, wanted_keys):
-    filtered = list()
-    for c in cases:
-        case_copy = dict()
-        if(has_keys(c, wanted_keys)):
-            for k in wanted_keys:
-                case_copy[k] = c[k]
-            filtered.append(case_copy)
-    return filtered
-
 def percent_matching_keys(case, wanted_keys):
     num_matching_keys = 0
     for k in wanted_keys:
@@ -142,7 +126,7 @@ def get_storage(s):
         i+=1
     return drives
 
-
+#DISCLAIMER: This method is disgusting, but it works. 
 def filter_variables(cases):
     # eliminate invalid Touchscreen values
     for c in cases:
@@ -276,6 +260,7 @@ def filter_variables(cases):
                 c['Class'] =  '2in1'
             elif 'macbook' in pickle_name:
                 c['Class'] =  'MacBook'
+
 
 def to_binary(cases, variable, value1, value0):
     for c in cases: 
